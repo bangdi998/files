@@ -3,3 +3,5 @@
 http://223.110.243.159/ott.js.chinamobile.com/PLTV/3/224/3221227725/index.m3u8
 #EXTINF:-1 tvg-id="CCTV1.cn" tvg-country="CN" tvg-language="Chinese;Mandarin Chinese" tvg-logo="https://upload.wikimedia.org/wikipedia/zh/6/65/CCTV-1_Logo.png" group-title="General",CCTV-1综合 (com)
 https://cctvksh5c.v.kcdnvip.com/live/cdrmcctv1_1/index.m3u8?BR=td&region=shanghai
+#EXTINF:-1 tvg-id="CCTV1.cn" tvg-country="CN" tvg-language="Chinese;Mandarin Chinese" tvg-logo="https://upload.wikimedia.org/wikipedia/zh/6/65/CCTV-1_Logo.png" group-title="General",CCTV-1综合 (com2)
+https://cctvksh5c.v.kcdnvip.com/live/cdrmcctv1_1/index.m3u8
