@@ -10,10 +10,10 @@ import threading
 search_input = input("请输入要搜索的内容：").replace(" ", "+") # 将空格替换成+号
 
 # 生成搜索链接
-search_url = f"https://appstorrent.ru/?story={search_input}&do=search&subaction=search"
+search_url = f"https://.../?story={search_input}&do=search&subaction=search"
 
 edge_driver_path = "your_edge_driver_path" # 替换成您本地 Edge 驱动的路径
-keyword = "https://appstorrent.ru/" # 指定关键字
+keyword = "https://.../" # 指定关键字
 
 # 创建 EdgeDriver 对象
 edge_service = EdgeService(executable_path=edge_driver_path)
