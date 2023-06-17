@@ -90,7 +90,8 @@ class StartPage(tk.Frame):
         # 输出对话框布局
         self.output_text = tk.Text(self, font=LARGE_FONT, state="disabled")
         self.output_text.pack(fill="both", expand=True, padx=10, pady=10)
-    def new_search(self, controller):
+    def new_search(self, controller, task=None):
+        global filename
         while True:
             # 获取要搜索的关键词
             search_text = self.search_text_entry.get()
@@ -341,6 +342,7 @@ def extract_social_links(page_source):
     return list(facebook_links), list(twitter_links), list(telegram_links)
 
 def start_options():
+    global browser, now, default_domains
     # 创建 WebDriver 实例
     # driver = webdriver.Chrome()
     options = Options()
@@ -356,7 +358,12 @@ def start_options():
     browser = webdriver.Chrome(service=service)
     # 创建chrome driver实例
     # driver = webdriver.Chrome(service=service, options=options)
+    # 获取当前日期时间并格式化为字符串
+    now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    # 设置默认的域名列表
+    default_domains = ['google.com']
 def main_process(self):
+    global existing_domains
     # 初始序列号为 0
     seq_no = 0
     count = 1
@@ -489,3 +496,4 @@ if __name__ == "__main__":
     app = MyGoogleBot()
     app.geometry("800x600")
     app.mainloop()
+
