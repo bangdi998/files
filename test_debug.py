@@ -88,15 +88,16 @@ class StartPage(tk.Frame):
         choose_file_button.pack(side="left", ipady=2)
 
         # 输出对话框布局
-        self.output_text = tk.Text(self, font=LARGE_FONT, state="disabled")
+        self.output_text = tk.Text(self, font=LARGE_FONT, state="normal")
         self.output_text.pack(fill="both", expand=True, padx=10, pady=10)
     def new_search(self, controller, task=None):
-        global filename
+        global filename, writer
         while True:
             # 获取要搜索的关键词
             search_text = self.search_text_entry.get()
             if search_text.strip() == '':
                 print('没有输入搜索内容，请重新输入！')
+                self.output_text.insert("end", "没有输入搜索内容，请重新输入！\n")
                 quit()
             if not search_text.endswith('contact'):
                 search_text += ''
@@ -104,12 +105,14 @@ class StartPage(tk.Frame):
             filename = f'dic_{search_text}.csv'
             if os.path.isfile(filename):
                 print(f'结果文件 {filename} 已存在，请重新选择操作！')
+                self.output_text.insert("end", f"结果文件 {filename} 已存在，请重新选择操作！\n")
                 continue
             # 新建结果文件并写入表头
             with open(filename, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(['href', 'domain', 'e-mail', 'country', 'lang', 'facebook', 'twitter', 'telegram'])
             print(f'已创建结果文件 {filename}')
+            self.output_text.insert("end", f"已创建结果文件 {filename}\n")
             break
         start_options()
         browser.get('https://www.google.com/search?q=' + search_text + ' contact')
@@ -121,11 +124,13 @@ class StartPage(tk.Frame):
         t.start()
 
     def choose_file(self):
+        global browser, filepath, current_url
         root = tk.Tk()
         root.withdraw()
         filepath = filedialog.askopenfilename(defaultextension='.csv', filetypes=[('CSV Files', '*.csv')])
         if not filepath:
             print('未选择文件，程序退出！')
+            self.output_text.insert("end", "未选择文件，程序退出！\n")
             exit()
 
         # 尝试多种编码格式来读取文件
@@ -137,21 +142,28 @@ class StartPage(tk.Frame):
                     results = list(reader)
                 if len(results) == 0:
                     print('结果文件中没有数据，请重新选择！')
+                    self.output_text.insert("end", "结果文件中没有数据，请重新选择！\n")
                     exit()
                 current_url = results[0][9]
                 if not current_url:
                     print('结果文件第一行第十列为空，请重新选择！')
+                    self.output_text.insert("end", "结果文件第一行第十列为空，请重新选择！\n")
                     exit()
+
+                # 调用 main_process() 函数处理任务
+                start_options()
+                browser.get(current_url)
+                time.sleep(2)
+                main_process(filepath, current_url)
+
                 return (filepath, current_url)
             except UnicodeDecodeError:
                 pass
 
         print(f'无法读取文件{filename}，请检查文件路径和编码格式。')
+        self.output_text.insert("end", f"无法读取文件{filename}，请检查文件路径和编码格式。\n")
         exit()
-        start_options()
-        browser.get(current_url)
-        time.sleep(2)
-        main_process(self)
+
         t = threading.Thread(target=task)
         t.daemon = True
         t.start()
@@ -172,6 +184,7 @@ def process_task(href):
     twitter_links = links_tuple[1]
     telegram_links = links_tuple[2]
     print(f"{domain}, {email_str}, {country_code}, {lang}, {facebook_links}, {twitter_links}, {telegram_links}")
+    # self.output_text.insert("end", f"{domain}, {email_str}, {country_code}, {lang}, {facebook_links}, {twitter_links}, {telegram_links}\n")
 
     # 直接将新的一行写入结果文件中
     row = [href, domain, email_str, country_code, lang, facebook_links, twitter_links, telegram_links]
@@ -204,6 +217,7 @@ def get_page_source(browser, href):
         browser.execute_script(f"window.open('{href}', '_blank');")
     except TimeoutException:
         print("Load page timed out.")
+        # self.output_text.insert("end", "Load page timed out.\n")
         browser.execute_script("window.stop();")
 
     # 等待页面加载完成
@@ -362,7 +376,7 @@ def start_options():
     now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     # 设置默认的域名列表
     default_domains = ['google.com']
-def main_process(self):
+def main_process(filepath, current_url):
     global existing_domains
     # 初始序列号为 0
     seq_no = 0
