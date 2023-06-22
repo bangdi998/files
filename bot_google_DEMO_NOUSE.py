@@ -70,11 +70,14 @@ def process_task(href):
     facebook_links = links_tuple[0]
     twitter_links = links_tuple[1]
     telegram_links = links_tuple[2]
-    print(f"{domain}, {email_str}, {country_code}, {lang}, {facebook_links}, {twitter_links}, {telegram_links}")
+    whatsapp_links = links_tuple[3]
+    print(f"{domain}, {email_str}, {country_code}, {lang}, {facebook_links}, {twitter_links}, {telegram_links}, {whatsapp_links}")
 
-    # 直接将新的一行写入结果文件中
-    row = [href, domain, email_str, country_code, lang, facebook_links, twitter_links, telegram_links]
-    writer.writerow(row)
+    # 使用 "a" 模式打开文件，将新的一行数据追加到文件末尾
+    with open(filename, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        row = [href, domain, email_str, country_code, lang, facebook_links, twitter_links, telegram_links, whatsapp_links]
+        writer.writerow(row)
     existing_domains.append(domain)
     # 将新域名写入表中
     with open('domain.json', 'w') as f2:
@@ -209,19 +212,20 @@ def get_page_language(browser):
     return lang
 def extract_social_links(page_source):
     """
-    从网页源代码中提取出所有的 Facebook 和 Twitter 链接。
+    从网页源代码中提取出所有的 Facebook、Twitter、Telegram 和 WhatsApp 链接。
 
     Args:
         page_source: 网页的源代码。
 
     Returns:
-        tuple: 一个元组，包含两个列表，分别表示找到的 Facebook 和 Twitter 链接。
+        tuple: 一个元组，包含三个列表，分别表示找到的 Facebook、Twitter、Telegram 和 WhatsApp 链接。
     """
 
-    # 匹配 Facebook 和 Twitter 链接
+    # 匹配 Facebook、Twitter 和 WhatsApp 链接
     soup = BeautifulSoup(page_source, 'lxml')
     facebook_links = set()
     twitter_links = set()
+    whatsapp_links = set()
     telegram_links = set()
     for a in soup.find_all('a', href=True):
         href = a['href']
@@ -231,8 +235,10 @@ def extract_social_links(page_source):
             twitter_links.add(href)
         elif 't.me' in href or 'telegram.me' in href:
             telegram_links.add(href)
+        elif 'whatsapp.com' in href or 'wa.me' in href:
+            whatsapp_links.add(href)
 
-    return list(facebook_links), list(twitter_links), list(telegram_links)
+    return list(facebook_links), list(twitter_links), list(telegram_links), list(whatsapp_links)
 # 选择是新建搜索还是继续之前的搜索
 print('请选择操作：')
 print('1. 开始新的搜索')
@@ -249,11 +255,6 @@ while True:
         if os.path.isfile(filename):
             print(f'结果文件 {filename} 已存在，请重新选择操作！')
             continue
-        # 新建结果文件并写入表头
-        with open(filename, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(['href', 'domain', 'e-mail', 'country', 'lang', 'facebook', 'twitter', 'telegram'])
-        print(f'已创建结果文件 {filename}')
         break
     elif choice == '2':
         # 选择结果文件并获取第一行第十列链接
@@ -283,7 +284,13 @@ browser = webdriver.Chrome(service=service)
 if choice == '1':
     # 打开 www.google.com 搜索网站
     browser.get('https://www.google.com/search?q=' + search_text + ' contact')
-    time.sleep(4)
+    time.sleep(3)
+    current_url = browser.current_url
+    # 新建结果文件并写入表头
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['href', 'domain', 'e-mail', 'country', 'lang', 'facebook', 'twitter', 'telegram', 'whatsapp',f'{current_url}'])
+    print(f'已创建结果文件 {filename}')
 
 # 如果是继续之前的搜索，则跳转到上次搜索结果的最后一页
 if choice == '2':
@@ -294,10 +301,8 @@ if choice == '2':
 seq_no = 0
 count = 1
 
-limit = 3
-page_count = 0
-
 browser.implicitly_wait(1)  # 隐式等待 2 秒
+start = time.time()
 # 循环搜索所有结果
 while True:
     # 查找所有搜索结果的标题元素列表，并逐个输出结果
@@ -389,14 +394,24 @@ while True:
     with open(filename, mode='w', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         writer.writerows(results)
-
-    page_count += 1
-    if page_count >= limit:  # 达到翻页次数限制，跳出循环
-        break
     # 找到"下一页"按钮并获取其链接
     try:
         browser.switch_to.window(browser.window_handles[0])
         time.sleep(1)
+
+        # 设置计数器
+        limit = 1
+
+        # 判断计数器是否大于等于 3
+        if limit >= 3:
+            print(f"以达到限制次数")
+            break
+
+        # 执行你的其他操作，包括找到下一页链接并跳转
+
+        # 计数器加 1
+        limit += 1
+
         next_page_link = browser.find_element(By.XPATH, '//a[@id="pnnext"]')
         next_page_href = next_page_link.get_attribute("href")
         # 跳转到下一页
@@ -412,6 +427,9 @@ while True:
             retry_link.click()
             time.sleep(3)
         except NoSuchElementException:
+            end = time.time()
+            elapsed = end - start
+            print("搜索完成共耗时 %.2f 分钟" % (elapsed / 60))
             break
 
 print(f'结果已保存到 {filename} 文件中')
