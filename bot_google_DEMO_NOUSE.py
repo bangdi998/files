@@ -87,10 +87,10 @@ def main_process(href):
     # 将新域名写入表中
     with open('domain.json', 'w') as f2:
         json.dump(existing_domains, f2)
-    browser.close()
+    # browser.close()
 
     # 切换回第一个标签页
-    browser.switch_to.window(browser.window_handles[0])
+    # browser.switch_to.window(browser.window_handles[0])
 def find_contact_page(url, soup):
     possible_pages = ["contact", "contact-us", "about", "about-us", "kontact", "kontact-us"]
     for page in possible_pages:
@@ -323,11 +323,12 @@ while True:
     links = []
     for div in divs:
         link_element = div.find_element(By.TAG_NAME, 'a')
-        href = link_element.get_attribute('href')
-        links.append(href)
+        links.append(link_element)
     # 先列出所有搜索结果
     results2 = []
     for i, link in enumerate(links):
+        href = link.get_attribute('href')
+        email_str = ''  # 添加定义 email_str 的语句
         # 打印序号和链接
         print(f"{i + 1}. {link}")
         results2.append((i + 1, link, '', '', '', ''))
@@ -363,8 +364,12 @@ while True:
 
             main_process(href)
             if not email_str:
-                find_contact_page()
+                find_contact_page(url, soup)
                 main_process(href)
+                browser.close()
+            else:
+                browser.close()
+            browser.switch_to.window(browser.window_handles[0])
             # hlinks.append([href])
         # 转换为任务列表
         # tasks = [{"href": link[0]} for link in hlinks]
