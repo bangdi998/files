@@ -20,6 +20,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.support.wait import WebDriverWait
+from urllib.parse import urljoin
+import webbrowser
 
 # 获取当前日期时间并格式化为字符串
 now = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -55,11 +57,14 @@ def choose_file():
 
     print(f'无法读取文件{filename}，请检查文件路径和编码格式。')
     exit()
-def process_task(href):
-    global current_url
-    global ext
-    global subdomain
-    global domain
+def process_task(href, email_str):
+    main_process(href)
+    if not email_str:
+        find_contact_page()
+        main_process(href)
+        # 如果返回 None 则开始下一个链接
+def main_process(href):
+    global current_url, ext, subdomain, domain
     page_source = get_page_source(browser, href)
     domain = extract_domain(browser)
     email_str = extract_emails(page_source)
@@ -86,6 +91,21 @@ def process_task(href):
 
     # 切换回第一个标签页
     browser.switch_to.window(browser.window_handles[0])
+def find_contact_page(url, soup):
+    possible_pages = ["contact", "contact-us", "about", "about-us", "kontact", "kontact-us"]
+    for page in possible_pages:
+        pattern = r"\b{}\b".format(page)
+        links = soup.find_all("a", href=re.compile(pattern, flags=re.IGNORECASE))
+        for link in links:
+            absolute_url = urljoin(url, link.get('href'))
+            if is_valid_contact_page(absolute_url):
+                browser.close()
+                browser.get(absolute_url)
+                # return absolute_url
+    return None
+def is_valid_contact_page(url):
+    response = requests.head(url)
+    return response.status_code == 200
 def get_page_source(browser, href):
     """
     使用 Selenium 打开链接并获取页面源代码。
@@ -248,8 +268,6 @@ while True:
     if choice == '1':
         # 获取要搜索的关键词
         search_text = input('请输入要搜索的内容：')
-        if not search_text.endswith('contact'):
-            search_text += ''
         # 检查结果文件是否已存在
         filename = f'dic_{search_text}.csv'
         if os.path.isfile(filename):
@@ -266,7 +284,6 @@ while True:
         print('无效的输入，请重新输入！')
 
 # 创建 WebDriver 实例
-# driver = webdriver.Chrome()
 options = Options()
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
@@ -278,12 +295,10 @@ driver_path = r'C:\Users\jason\PycharmProjects\pythonProject\Orders\dist\chromed
 # 创建浏览器对象，这里使用Chrome浏览器
 service = Service(driver_path)
 browser = webdriver.Chrome(service=service)
-# 创建chrome driver实例
-# driver = webdriver.Chrome(service=service, options=options)
 
 if choice == '1':
     # 打开 www.google.com 搜索网站
-    browser.get('https://www.google.com/search?q=' + search_text + ' contact')
+    browser.get('https://www.google.com/search?q=' + search_text)
     time.sleep(3)
     current_url = browser.current_url
     # 新建结果文件并写入表头
@@ -297,28 +312,25 @@ if choice == '2':
     browser.get(current_url)
     time.sleep(2)
 
-# 初始序列号为 0
-seq_no = 0
-count = 1
-
-browser.implicitly_wait(1)  # 隐式等待 2 秒
+browser.implicitly_wait(0.5)  # 隐式等待 2 秒
 start = time.time()
+global email_str
 # 循环搜索所有结果
 while True:
     # 查找所有搜索结果的标题元素列表，并逐个输出结果
-    divs = browser.find_elements(By.XPATH, '//div[@class="yuRUbf"]')
+    divs = browser.find_elements(By.XPATH, '//div[@class="yuRUbf" or @class="v5yQqb"]')
     # 遍历每个 div 元素，并输出其后面的链接地址
     links = []
     for div in divs:
-        link1 = div.find_element(By.TAG_NAME, 'a')
-        links.append(link1)
+        link_element = div.find_element(By.TAG_NAME, 'a')
+        href = link_element.get_attribute('href')
+        links.append(href)
     # 先列出所有搜索结果
     results2 = []
     for i, link in enumerate(links):
-        href = link.get_attribute("href")
         # 打印序号和链接
-        print(f"{i + 1}. {href}")
-        results2.append((i + 1, href, '', '', '', ''))
+        print(f"{i + 1}. {link}")
+        results2.append((i + 1, link, '', '', '', ''))
 
     # 检查 domain.json 文件是否存在，如果不存在则创建一个包含默认域名列表的文件
     if not os.path.exists('domain.json'):
@@ -349,14 +361,15 @@ while True:
             if domain in existing_domains:
                 continue
 
-            # 将新的域名添加到域名列表中
-            # existing_domains.append(domain)
-
-            hlinks.append([href])
+            main_process(href)
+            if not email_str:
+                find_contact_page()
+                main_process(href)
+            # hlinks.append([href])
         # 转换为任务列表
-        tasks = [{"href": link[0]} for link in hlinks]
+        # tasks = [{"href": link[0]} for link in hlinks]
         # 处理任务列表中的每个任务
-        results = [process_task(task["href"]) for task in tasks]
+        # results = [process_task(task["href"]) for task in tasks]
 
     # 将当前页面的完整链接写入结果文件的第一行第十列
     browser.switch_to.window(browser.window_handles[0])
